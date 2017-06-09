@@ -1,0 +1,42 @@
+#Add-PSSnapin Microsoft.SharePoint.PowerShell
+
+# Replace siteurl with actual web url
+$web = Get-SPWeb -Identity "http://url.sitio";
+# Replace docurl with document library url
+$list = $web.GetList("Documentos");
+$fechaeliminacion=(Get-Date 01/07/2016);
+function DeleteFiles {
+param($folderUrl)
+$folder = $web.GetFolder($folderUrl)
+foreach ($file in $folder.Files) {
+    # Delete file by deleting parent SPListItem
+    if($file.TimeCreated.ToLocalTime() -lt $fechaeliminacion){
+     Write-Host("Creacion archivo: " + $file.TimeCreated.ToLocalTime())
+     Write-Host("DELETED FILE: " + $file.name)
+     $list.Items.DeleteItemById($file.Item.Id)
+    }
+}
+}
+
+# Delete root files
+DeleteFiles($list.RootFolder.Url)
+
+# Delete files in folders
+foreach ($folder in $list.Folders) {
+DeleteFiles($folder.Url)
+}
+
+# Delete folders
+foreach ($folder in $list.Folders) {
+try {
+    #Condicion de fecha de elminacion
+    if($folder["Created"] -lt $fechaeliminacion){
+      Write-Host("Creacion del FOLDER: " + $folder["Created"])
+      Write-Host("DELETED FOLDER: " + $folder.name)
+      $list.Folders.DeleteItemById($folder.ID)
+    }
+}
+catch {
+    # Deletion of parent folder already deleted this folder
+}
+}
